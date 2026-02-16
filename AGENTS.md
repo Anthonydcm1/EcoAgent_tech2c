@@ -27,11 +27,28 @@ O agente tem acesso às seguintes "ferramentas" (simuladas na versão atual):
 
 ### 🔄 Workflow de IA
 
+**Modo Real (com OpenAI API):**
+
+1.  **Input**: Usuário envia mensagem via interface de chat.
+2.  **Frontend**: React captura a mensagem e envia para o backend via `useRealAgent()`.
+3.  **Backend**: Servidor Express recebe a mensagem e adiciona o System Prompt.
+4.  **OpenAI**: Backend faz chamada à API da OpenAI (modelo GPT-4o-mini).
+5.  **Streaming**: Resposta é enviada em tempo real (streaming) para o frontend.
+6.  **Renderização**: Interface exibe a resposta progressivamente.
+
+**Modo Mock (sem API key):**
+
 1.  **Input**: Usuário envia mensagem ou arquivo.
-2.  **Processamento**: O Agente (LLM) analisa a intenção.
-3.  **Tool Call**: Se necessário, o Agente decide chamar uma ferramenta.
-    -   *No MVP atual, isso é feito via `keyword matching` no hook `useMockAgent`.*
-4.  **Resposta**: O Agente processa o resultado da ferramenta e gera uma resposta natural para o usuário.
+2.  **Processamento**: O hook `useMockAgent` analisa a intenção via keyword matching.
+3.  **Tool Call**: Simula chamada de ferramenta baseado em palavras-chave.
+4.  **Resposta**: Retorna resposta pré-programada após delay simulado (1200ms).
+
+**Sistema Híbrido:**
+
+O hook `useAgent()` detecta automaticamente qual modo usar:
+- ✅ **API Key configurada** → Usa OpenAI real
+- ❌ **Sem API Key** → Usa mock
+- 🔧 **VITE_FORCE_MOCK=true** → Força mock (útil para desenvolvimento)
 
 ---
 

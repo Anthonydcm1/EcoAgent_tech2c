@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 // Interface que define a estrutura de uma mensagem no chat
 export interface Message {
     id: string;
-    role: 'user' | 'assistant' | 'system';
+    role: 'user' | 'assistant' | 'system' | 'function' | 'data' | 'tool';
     content: string;
     toolInvocations?: Array<{
         toolName: string;

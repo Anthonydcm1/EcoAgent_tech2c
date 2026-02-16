@@ -1,43 +1,66 @@
-
 import { useState } from 'react';
-import { Send, Bot, User } from 'lucide-react';
-import { useMockAgent } from '../hooks/use-mock-agent';
+import { Send, Bot, User, Trash2, Sparkles } from 'lucide-react';
+import { useAgent, type Message } from '../hooks/use-agent';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Página do Assistente Virtual (IA)
 export function Chat() {
-    // Hook personalizado para gerenciar as mensagens do agente
-    const { messages, append, isLoading } = useMockAgent();
+    // Hook personalizado para gerenciar as mensagens do agente (alterna automaticamente entre mock e real)
+    const { messages, append, isLoading } = useAgent();
     // Estado local para o texto digitado pelo usuário
     const [input, setInput] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     // Função que processa o envio de mensagens
-    const handleSubmit = (e?: React.FormEvent, customInput?: string) => {
+    const handleSubmit = async (e?: React.FormEvent, customInput?: string) => {
         if (e) e.preventDefault();
         const text = customInput || input;
         if (!text.trim()) return;
-        append({ role: 'user', content: text });
-        setInput('');
+
+        setError(null);
+        try {
+            await append({ role: 'user', content: text });
+            setInput('');
+        } catch (err) {
+            console.error('Chat error:', err);
+            setError('Ops! Ocorreu um erro ao enviar sua mensagem. Verifique se o servidor está rodando ou sua cota da OpenAI.');
+        }
+    };
+
+    const clearChat = () => {
+        // Como o useChat não exporta clear/reset diretamente de forma fácil em todas as versões do mock/real,
+        // vamos sugerir recarregar ou implementar um estado local se necessário.
+        // No momento, vamos apenas simular ou limpar se o hook suportar (o mock não suporta explicitamente sem mudança)
+        window.location.reload(); // Solução simples para o MVP
     };
 
     const suggestions = [
-        { label: "Ver custos", icon: "💰" },
-        { label: "Analisar", icon: "📊" },
-        { label: "Economizar energia", icon: "💡" }
+        { label: "Analisar custos deste mês", icon: <Sparkles className="w-3 h-3 text-blue-500" /> },
+        { label: "Onde posso economizar?", icon: <Sparkles className="w-3 h-3 text-emerald-500" /> },
+        { label: "Detectar picos de consumo", icon: <Sparkles className="w-3 h-3 text-amber-500" /> }
     ];
 
     return (
         <div className="space-y-4 lg:space-y-6 h-[calc(100vh-10rem)] lg:h-[calc(100vh-8rem)] flex flex-col">
-            <div>
-                <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Assistente IA</h2>
-                <p className="text-sm lg:text-base text-slate-500 dark:text-slate-400">Interaja com o agente para insights em tempo real.</p>
+            <div className="flex justify-between items-end">
+                <div>
+                    <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Assistente IA</h2>
+                    <p className="text-sm lg:text-base text-slate-500 dark:text-slate-400">Interaja com o agente para insights em tempo real.</p>
+                </div>
+                <button
+                    onClick={clearChat}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-red-500 transition-colors border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10"
+                >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Limpar
+                </button>
             </div>
 
             <div className="flex-1 flex flex-col rounded-2xl border bg-white dark:bg-slate-900 shadow-sm overflow-hidden border-slate-100 dark:border-slate-800 transition-colors">
                 <div className="flex-1 p-3 lg:p-4 overflow-y-auto space-y-4 bg-slate-50/30 dark:bg-slate-950/30">
                     <AnimatePresence>
-                        {messages.map((m) => (
+                        {messages.map((m: Message) => (
                             <motion.div
                                 key={m.id}
                                 initial={{ opacity: 0, y: 10 }}
@@ -78,6 +101,11 @@ export function Chat() {
                             </div>
                         </div>
                     )}
+                    {error && (
+                        <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs text-center animate-shake">
+                            {error}
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-3 lg:p-4 border-t bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800">
@@ -86,9 +114,10 @@ export function Chat() {
                             <button
                                 key={i}
                                 onClick={() => handleSubmit(undefined, s.label)}
-                                className="text-[10px] lg:text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                className="text-[10px] lg:text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 shadow-sm"
                             >
-                                {s.icon} {s.label}
+                                {s.icon}
+                                <span>{s.label}</span>
                             </button>
                         ))}
                     </div>
