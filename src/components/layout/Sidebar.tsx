@@ -1,5 +1,5 @@
 
-import { Home, Lightbulb, MessageSquare, Menu } from 'lucide-react';
+import { Home, Lightbulb, Menu } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useState } from 'react';
@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Análise de Energia', href: '/analysis', icon: Lightbulb },
-    { name: 'Chat IA', href: '/chat', icon: MessageSquare },
 ];
 
 // Componente Sidebar (Menu Lateral) responsivo

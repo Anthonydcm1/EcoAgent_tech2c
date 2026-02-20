@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
 import { Dashboard } from './pages/Dashboard';
 import { Analysis } from './pages/Analysis';
-import { Chat } from './pages/Chat';
 import { NotFound } from './pages/NotFound';
 import './App.css';
 
@@ -18,8 +17,6 @@ function App() {
           <Route index element={<Dashboard />} />
           {/* Rota de análise de dados ambientais */}
           <Route path="analysis" element={<Analysis />} />
-          {/* Rota de chat com a IA */}
-          <Route path="chat" element={<Chat />} />
           {/* Rota de fallback para páginas não encontradas */}
           <Route path="*" element={<NotFound />} />
         </Route>

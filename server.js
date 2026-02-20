@@ -69,7 +69,39 @@ const tools = [
     }
 ];
 
-// Rota Principal de Chat: Suporta Streaming (respostas em tempo real)
+// Implementação real (simulada) das ferramentas
+const toolsImplementation = {
+    analyzeEnergyConsumption: (args) => {
+        console.log('🛠️ Executando tool: analyzeEnergyConsumption', args);
+        const period = args.period || 'último mês';
+        // Simulando uma análise de dados real
+        return {
+            status: 'success',
+            period: period,
+            summary: 'Detectado um pico de consumo de 25% na terça-feira entre as 18h e 20h.',
+            recommendation: 'Verificar sistema de climatização neste horário.',
+            anomalies: [
+                { time: 'Terça, 18:30', value: '4.5kWh', average: '3.2kWh' }
+            ]
+        };
+    },
+    suggestImprovements: (args) => {
+        console.log('🛠️ Executando tool: suggestImprovements', args);
+        const category = args.category || 'geral';
+        const suggestions = {
+            'iluminação': ['Trocar lâmpadas fluorescentes por LED', 'Instalar sensores de presença'],
+            'climatização': ['Limpar filtros do AC', 'Ajustar temperatura para 23°C constante'],
+            'maquinário': ['Realizar manutenção preventiva nos motores', 'Trocar correias gastas'],
+            'geral': ['Instalar painéis solares', 'Negociar nova tarifa horária']
+        };
+        return {
+            category: category,
+            recommendations: suggestions[category] || suggestions['geral']
+        };
+    }
+};
+
+// Rota Principal de Chat: Suporta Streaming e Tool Calling (Agente)
 app.post('/api/chat', async (req, res) => {
     try {
         const { messages } = req.body;
@@ -78,52 +110,72 @@ app.post('/api/chat', async (req, res) => {
             return res.status(400).json({ error: 'Lista de mensagens é obrigatória' });
         }
 
-        // Combina o prompt de sistema com o histórico do utilizador
-        const messagesWithSystem = [
-            { role: 'system', content: SYSTEM_PROMPT },
-            ...messages,
-        ];
-
-        // 1. Solicita a resposta ao modelo ANTES de definir os headers
-        const stream = await openai.chat.completions.create({
-            model: 'openai/gpt-3.5-turbo', // Modelo oficial OpenAI via OpenRouter
-            messages: messagesWithSystem,
-            stream: true,
-            temperature: 0.7,
-            max_tokens: 1000,
-        });
-
-        // 2. Se chegou aqui, a ligação funcionou. Define os headers de streaming.
+        // Define os headers de streaming imediatamente para suportar a resposta em tempo real
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-        // 3. Envia os dados como texto puro (compatível com useChat)
-        for await (const chunk of stream) {
-            const content = chunk.choices[0]?.delta?.content || '';
-            if (content) {
-                res.write(content);
+        let currentMessages = [
+            { role: 'system', content: SYSTEM_PROMPT },
+            ...messages,
+        ];
+
+        // Loop de execução do Agente (permite que ele chame ferramentas e use o resultado)
+        let iterations = 0;
+        const maxIterations = 3;
+
+        while (iterations < maxIterations) {
+            iterations++;
+
+            const completion = await openai.chat.completions.create({
+                model: 'openai/gpt-3.5-turbo',
+                messages: currentMessages,
+                tools: tools,
+                tool_choice: 'auto',
+                temperature: 0.7,
+                stream: false, // Para gerir tool calling no backend de forma simples, usamos stream: false na primeira fase
+            });
+
+            const message = completion.choices[0].message;
+            currentMessages.push(message);
+
+            // Se o modelo decidir NÃO chamar ferramentas, enviamos o conteúdo final e paramos
+            if (!message.tool_calls) {
+                if (message.content) {
+                    res.write(message.content);
+                }
+                break;
             }
+
+            // Se o modelo decidir CHAMAR ferramentas
+            for (const toolCall of message.tool_calls) {
+                const functionName = toolCall.function.name;
+                const functionArgs = JSON.parse(toolCall.function.arguments);
+
+                // Envia uma notificação visual via stream (opcional, melhora UX)
+                res.write(`\n> [Agente executando: ${functionName}...]\n\n`);
+
+                const functionResponse = toolsImplementation[functionName](functionArgs);
+
+                currentMessages.push({
+                    tool_call_id: toolCall.id,
+                    role: 'tool',
+                    name: functionName,
+                    content: JSON.stringify(functionResponse),
+                });
+            }
+            // O loop continua para que o modelo analise o resultado da ferramenta e responda ao usuário
         }
 
         res.end();
     } catch (error) {
-        console.error('❌ Erro na API:', error.message);
-
-        // Se ainda não enviamos nada, podemos enviar um JSON de erro
+        console.error('❌ Erro na API:', error);
         if (!res.headersSent) {
-            if (error.status === 404 || error.message?.includes('data policy')) {
-                return res.status(500).json({
-                    error: 'Configuração do OpenRouter necessária',
-                    message: 'Verifique se ativou o 3º interruptor no OpenRouter e REINICIE o comando npm run dev:full.'
-                });
-            }
-            return res.status(500).json({
-                error: 'Erro de conexão com a IA',
-                message: error.message || 'O servidor de IA não respondeu corretamente.'
-            });
+            res.status(500).json({ error: 'Erro de conexão com a IA' });
+        } else {
+            res.write('\n\n[Erro: Ocorreu uma interrupção na conexão com a IA]');
+            res.end();
         }
-        res.end();
     }
 });
 

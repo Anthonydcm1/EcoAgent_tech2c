@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { ThemeToggle } from '../ui/ThemeToggle';
+import { ChatWidget } from '../ChatWidget';
 
 // Componente de Layout principal que define a estrutura visual comum
 export function AppLayout() {
@@ -23,6 +24,8 @@ export function AppLayout() {
                     </div>
                 </div>
             </main>
+            {/* Widget de Chat Flutuante */}
+            <ChatWidget />
         </div>
     );
 }
