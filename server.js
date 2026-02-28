@@ -16,7 +16,7 @@ app.use(express.json()); // Permite receber e ler dados em formato JSON
 // Configuração do Cliente OpenAI adaptado para o OpenRouter
 // O OpenRouter segue o mesmo protocolo da OpenAI, permitindo usar modelos gratuitos
 const openai = new OpenAI({
-    apiKey: process.env.VITE_OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',
     defaultHeaders: {
         'HTTP-Referer': 'http://localhost:5173', // Obrigatório para o OpenRouter
